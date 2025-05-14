@@ -1,4 +1,5 @@
 ﻿using OpenTK.Graphics.OpenGL4;
+using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
@@ -36,6 +37,11 @@ namespace DiploHex.App
 
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
+
+            // Set the initial value of the uniform offset
+            GL.UseProgram(Shader);
+            OffsetLocation = GL.GetUniformLocation(Shader, "aOffset");
+            GL.Uniform3(OffsetLocation, 0.0f, 0.0f, 0.0f);
         }
 
         private static int MakeVertexShader(string vertexShaderSource)
@@ -108,6 +114,10 @@ namespace DiploHex.App
             {
                 Close();
             }
+
+            // Update the uniform offset dynamically if needed
+            GL.UseProgram(Shader);
+            GL.Uniform3(OffsetLocation, RenderOffset.X, RenderOffset.Y, 0.0f);
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
@@ -139,19 +149,56 @@ namespace DiploHex.App
             base.OnUnload();
         }
 
+        private bool IsMouseDragging { get; set; }
+
+        private Vector2 RenderOffsetBase { get; set; }
+
+        private Vector2 RenderOffset =>
+            IsMouseDragging
+            ? RenderOffsetBase + (LastMousePosition - DragStartMousePosition)
+            : RenderOffsetBase;
+
+        private Vector2 LastMousePosition { get; set; }
+
+        private Vector2 DragStartMousePosition { get; set; }
+
+        protected override void OnMouseMove(MouseMoveEventArgs e)
+        {
+            base.OnMouseMove(e);
+            LastMousePosition = (2 * MousePosition.X / FramebufferSize.X, -2 * MousePosition.Y / FramebufferSize.Y);
+        }
+
+        protected override void OnMouseDown(MouseButtonEventArgs e)
+        {
+            base.OnMouseDown(e);
+            DragStartMousePosition = LastMousePosition;
+            IsMouseDragging = true;
+        }
+
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            base.OnMouseDown(e);
+            RenderOffsetBase = RenderOffset;
+            IsMouseDragging = false;
+        }
+
         private int VertexBufferObject { get; set; }
 
         private int VertexArrayObject { get; set; }
 
         private int Shader { get; set; }
 
+        private int OffsetLocation { get; set; }
+
         private string VertexShaderSource => @"
             #version 330 core
             layout (location = 0) in vec3 aPosition;
 
+            uniform vec3 aOffset;
+
             void main()
             {
-                gl_Position = vec4(aPosition, 1.0);
+                gl_Position = vec4(aPosition + aOffset, 1.0);
             }
         ";
 
