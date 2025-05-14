@@ -114,10 +114,11 @@ namespace DiploHex.App
             {
                 Close();
             }
-
-            // Update the uniform offset dynamically if needed
-            GL.UseProgram(Shader);
-            GL.Uniform3(OffsetLocation, RenderOffset.X, RenderOffset.Y, 0.0f);
+            else if (KeyboardState.IsKeyDown(Keys.R))
+            {
+                RenderOffsetBase = Vector2.Zero;
+                DragStartMousePosition = LastMousePosition;
+            }
         }
 
         protected override void OnRenderFrame(FrameEventArgs e)
@@ -127,6 +128,8 @@ namespace DiploHex.App
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
             GL.UseProgram(Shader);
+
+            GL.Uniform3(OffsetLocation, RenderOffset.X, RenderOffset.Y, 0.0f);
 
             GL.BindVertexArray(VertexArrayObject);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
