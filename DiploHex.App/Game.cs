@@ -28,10 +28,11 @@ namespace DiploHex.App
                  0.0f,  0.5f, 0.0f  //Top vertex
             };
 
-            string vertexShaderSource = File.ReadAllText("Shaders/vertex.glsl");
-            string fragmentShaderSource = File.ReadAllText("Shaders/fragment.glsl");
+            Shader = new ShaderBuilder()
+                .AddVertexFile("Shaders/vertex.glsl")
+                .AddFragmentFile("Shaders/fragment.glsl")
+                .Build();
 
-            Shader = new Shader(vertexShaderSource, fragmentShaderSource);
             VertexBufferObject = GL.GenBuffer();
             VertexArrayObject = GL.GenVertexArray();
 
