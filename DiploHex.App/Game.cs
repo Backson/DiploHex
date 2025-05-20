@@ -16,7 +16,8 @@ namespace DiploHex.App
 
         }
 
-        private readonly Color4 ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
+        private static readonly Color4 ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
+        private static readonly Color4 FillColor = new Color4(1.0f, 0.5f, 0.2f, 1.0f);
 
         protected override void OnLoad()
         {
@@ -47,7 +48,10 @@ namespace DiploHex.App
             GL.EnableVertexAttribArray(0);
 
             Shader.Use();
-            OffsetLocation = Shader.GetUniformLocation("aOffset");
+
+            OffsetLocation = Shader.GetUniformLocation("uOffset");
+            ColorLocation = Shader.GetUniformLocation("uColor");
+
             GL.Uniform3(OffsetLocation, Vector3.Zero);
         }
 
@@ -75,6 +79,7 @@ namespace DiploHex.App
             Shader.Use();
             Vector2 renderOffset = new(RenderOffset.X, RenderOffset.Y);
             GL.Uniform2(OffsetLocation, renderOffset);
+            GL.Uniform4(ColorLocation, FillColor);
 
             GL.BindVertexArray(VertexArrayObject);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
@@ -139,6 +144,8 @@ namespace DiploHex.App
         private Shader Shader { get; set; }
 
         private int OffsetLocation { get; set; }
+
+        private int ColorLocation { get; set; }
 
         private static NativeWindowSettings MakeWindowSettings(int width, int height, string title)
         {
