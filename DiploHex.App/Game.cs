@@ -3,6 +3,8 @@ using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
+using System;
+using System.IO;
 
 namespace DiploHex.App
 {
@@ -26,7 +28,10 @@ namespace DiploHex.App
                  0.0f,  0.5f, 0.0f  //Top vertex
             };
 
-            Shader = MakeShader(VertexShaderSource, FragmentShaderSource);
+            string vertexShaderSource = File.ReadAllText("Shaders/vertex.glsl");
+            string fragmentShaderSource = File.ReadAllText("Shaders/fragment.glsl");
+
+            Shader = new Shader(vertexShaderSource, fragmentShaderSource);
             VertexBufferObject = GL.GenBuffer();
             VertexArrayObject = GL.GenVertexArray();
 
@@ -38,72 +43,9 @@ namespace DiploHex.App
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
 
-            // Set the initial value of the uniform offset
-            GL.UseProgram(Shader);
-            OffsetLocation = GL.GetUniformLocation(Shader, "aOffset");
+            Shader.Use();
+            OffsetLocation = Shader.GetUniformLocation("aOffset");
             GL.Uniform3(OffsetLocation, 0.0f, 0.0f, 0.0f);
-        }
-
-        private static int MakeVertexShader(string vertexShaderSource)
-        {
-            int shader = GL.CreateShader(ShaderType.VertexShader);
-            GL.ShaderSource(shader, vertexShaderSource);
-
-            GL.CompileShader(shader);
-
-            GL.GetShader(shader, ShaderParameter.CompileStatus, out int success);
-            if (success == 0)
-            {
-                string infoLog = GL.GetShaderInfoLog(shader);
-                Console.WriteLine(infoLog);
-            }
-
-            return shader;
-        }
-
-        private static int MakeFragmentShader(string fragmentShaderSource)
-        {
-            int shader = GL.CreateShader(ShaderType.FragmentShader);
-            GL.ShaderSource(shader, fragmentShaderSource);
-
-            GL.CompileShader(shader);
-
-            GL.GetShader(shader, ShaderParameter.CompileStatus, out int success);
-            if (success == 0)
-            {
-                string infoLog = GL.GetShaderInfoLog(shader);
-                Console.WriteLine(infoLog);
-            }
-
-            return shader;
-        }
-
-        private static int MakeShader(string vertexShaderSource, string fragmentShaderSource)
-        {
-            int VertexShader = MakeVertexShader(vertexShaderSource);
-            int FragmentShader = MakeFragmentShader(fragmentShaderSource);
-
-            int shader = GL.CreateProgram();
-
-            GL.AttachShader(shader, VertexShader);
-            GL.AttachShader(shader, FragmentShader);
-
-            GL.LinkProgram(shader);
-
-            GL.GetProgram(shader, GetProgramParameterName.LinkStatus, out int success);
-            if (success == 0)
-            {
-                string infoLog = GL.GetProgramInfoLog(shader);
-                Console.WriteLine(infoLog);
-            }
-
-            GL.DetachShader(shader, VertexShader);
-            GL.DetachShader(shader, FragmentShader);
-
-            GL.DeleteShader(FragmentShader);
-            GL.DeleteShader(VertexShader);
-
-            return shader;
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -127,8 +69,7 @@ namespace DiploHex.App
 
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
-            GL.UseProgram(Shader);
-
+            Shader.Use();
             GL.Uniform3(OffsetLocation, RenderOffset.X, RenderOffset.Y, 0.0f);
 
             GL.BindVertexArray(VertexArrayObject);
@@ -148,6 +89,8 @@ namespace DiploHex.App
         {
             GL.BindBuffer(BufferTarget.ArrayBuffer, 0);
             GL.DeleteBuffer(VertexBufferObject);
+
+            Shader?.Dispose();
 
             base.OnUnload();
         }
@@ -189,31 +132,9 @@ namespace DiploHex.App
 
         private int VertexArrayObject { get; set; }
 
-        private int Shader { get; set; }
+        private Shader Shader { get; set; }
 
         private int OffsetLocation { get; set; }
-
-        private string VertexShaderSource => @"
-            #version 330 core
-            layout (location = 0) in vec3 aPosition;
-
-            uniform vec3 aOffset;
-
-            void main()
-            {
-                gl_Position = vec4(aPosition + aOffset, 1.0);
-            }
-        ";
-
-        private string FragmentShaderSource => @"
-            #version 330 core
-            out vec4 FragColor;
-
-            void main()
-            {
-                FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-            }
-        ";
 
         private static NativeWindowSettings MakeWindowSettings(int width, int height, string title)
         {
@@ -224,5 +145,4 @@ namespace DiploHex.App
             };
         }
     }
-
 }
