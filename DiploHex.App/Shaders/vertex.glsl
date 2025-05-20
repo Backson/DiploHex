@@ -2,11 +2,9 @@
 
 layout (location = 0) in vec3 aPosition;
 
-uniform vec2 uOffset;
+uniform mat4 uTransform;
 
 void main()
 {
-    vec3 offset = vec3(uOffset, 0.0);
-    vec3 position = aPosition + offset;
-    gl_Position = vec4(position, 1.0);
+    gl_Position = uTransform * vec4(aPosition, 1.0);
 }

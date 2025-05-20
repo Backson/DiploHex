@@ -19,6 +19,8 @@ namespace DiploHex.App
         private static readonly Color4 ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
         private static readonly Color4 FillColor = new Color4(1.0f, 0.5f, 0.2f, 1.0f);
 
+        public float Zoom { get; private set; } = 1.0f;
+
         protected override void OnLoad()
         {
             base.OnLoad();
@@ -49,10 +51,8 @@ namespace DiploHex.App
 
             Shader.Use();
 
-            OffsetLocation = Shader.GetUniformLocation("uOffset");
+            TransformLocation = Shader.GetUniformLocation("uTransform");
             ColorLocation = Shader.GetUniformLocation("uColor");
-
-            GL.Uniform3(OffsetLocation, Vector3.Zero);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -66,6 +66,7 @@ namespace DiploHex.App
             else if (KeyboardState.IsKeyDown(Keys.R))
             {
                 RenderOffsetBase = Vector2.Zero;
+                Zoom = 1.0f;
                 DragStartMousePosition = LastMousePosition;
             }
         }
@@ -74,16 +75,26 @@ namespace DiploHex.App
         {
             base.OnRenderFrame(e);
 
+            // Clear the screen
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
+            // Activate shader
             Shader.Use();
-            Vector2 renderOffset = new(RenderOffset.X, RenderOffset.Y);
-            GL.Uniform2(OffsetLocation, renderOffset);
+
+            // Set transformation matrix
+            Matrix4 transform =
+                Matrix4.CreateScale(Zoom) *
+                Matrix4.CreateTranslation(new Vector3(RenderOffset.X, RenderOffset.Y, 0.0f));
+            GL.UniformMatrix4(TransformLocation, false, ref transform);
+
+            // Set fill color
             GL.Uniform4(ColorLocation, FillColor);
 
+            // Draw objects
             GL.BindVertexArray(VertexArrayObject);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
 
+            // Swap buffers
             SwapBuffers();
         }
 
@@ -137,13 +148,21 @@ namespace DiploHex.App
             IsMouseDragging = false;
         }
 
+        protected override void OnMouseWheel(MouseWheelEventArgs e)
+        {
+            base.OnMouseWheel(e);
+            float zoomSpeed = 0.1f;
+            Zoom *= 1.0f + e.OffsetY * zoomSpeed;
+            Zoom = Math.Clamp(Zoom, 0.1f, 10.0f);
+        }
+
         private int VertexBufferObject { get; set; }
 
         private int VertexArrayObject { get; set; }
 
         private Shader Shader { get; set; }
 
-        private int OffsetLocation { get; set; }
+        private int TransformLocation { get; set; }
 
         private int ColorLocation { get; set; }
 
