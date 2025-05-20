@@ -16,17 +16,19 @@ namespace DiploHex.App
 
         }
 
+        private readonly Color4 ClearColor = new Color4(0.2f, 0.3f, 0.3f, 1.0f);
+
         protected override void OnLoad()
         {
             base.OnLoad();
 
-            GL.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+            GL.ClearColor(ClearColor);
 
-            float[] vertices = {
-                -0.5f, -0.5f, 0.0f, //Bottom-left vertex
-                 0.5f, -0.5f, 0.0f, //Bottom-right vertex
-                 0.0f,  0.5f, 0.0f  //Top vertex
-            };
+            Vector3[] vertices = [
+                new(-0.5f, -0.5f, 0.0f),
+                new( 0.5f, -0.5f, 0.0f),
+                new( 0.0f,  0.5f, 0.0f)
+            ];
 
             Shader = new ShaderBuilder()
                 .AddVertexFile("Shaders/vertex.glsl")
@@ -39,14 +41,14 @@ namespace DiploHex.App
             GL.BindVertexArray(VertexArrayObject);
 
             GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float), vertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * Vector3.SizeInBytes, vertices, BufferUsageHint.StaticDraw);
 
             GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
             GL.EnableVertexAttribArray(0);
 
             Shader.Use();
             OffsetLocation = Shader.GetUniformLocation("aOffset");
-            GL.Uniform3(OffsetLocation, 0.0f, 0.0f, 0.0f);
+            GL.Uniform3(OffsetLocation, Vector3.Zero);
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -71,7 +73,8 @@ namespace DiploHex.App
             GL.Clear(ClearBufferMask.ColorBufferBit);
 
             Shader.Use();
-            GL.Uniform3(OffsetLocation, RenderOffset.X, RenderOffset.Y, 0.0f);
+            Vector2 renderOffset = new(RenderOffset.X, RenderOffset.Y);
+            GL.Uniform2(OffsetLocation, renderOffset);
 
             GL.BindVertexArray(VertexArrayObject);
             GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
