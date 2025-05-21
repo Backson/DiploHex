@@ -21,17 +21,21 @@ namespace DiploHex.App
 
         public float Zoom { get; private set; } = 1.0f;
 
+        public float ViewportAspectRatio { get; private set; } = 1.0f;
+
+        private static readonly Vector3[] vertices = [
+            new(-0.5f, -0.5f, 0.0f),
+            new( 0.5f, -0.5f, 0.0f),
+            new( 0.0f,  0.5f, 0.0f),
+        ];
+
         protected override void OnLoad()
         {
             base.OnLoad();
 
-            GL.ClearColor(ClearColor);
+            UpdateViewport(FramebufferSize.X, FramebufferSize.Y);
 
-            Vector3[] vertices = [
-                new(-0.5f, -0.5f, 0.0f),
-                new( 0.5f, -0.5f, 0.0f),
-                new( 0.0f,  0.5f, 0.0f)
-            ];
+            GL.ClearColor(ClearColor);
 
             Shader = new ShaderBuilder()
                 .AddVertexFile("Shaders/vertex.glsl")
@@ -83,8 +87,9 @@ namespace DiploHex.App
 
             // Set transformation matrix
             Matrix4 transform =
-                Matrix4.CreateScale(Zoom) *
-                Matrix4.CreateTranslation(new Vector3(RenderOffset.X, RenderOffset.Y, 0.0f));
+                Matrix4.CreateScale(1.0f / ViewportAspectRatio, 1.0f, 1.0f) * // Maintain aspect ratio
+                Matrix4.CreateScale(Zoom) * // Apply zoom
+                Matrix4.CreateTranslation(new Vector3(RenderOffset.X, RenderOffset.Y, 0.0f)); // Apply offset
             GL.UniformMatrix4(TransformLocation, false, ref transform);
 
             // Set fill color
@@ -92,7 +97,7 @@ namespace DiploHex.App
 
             // Draw objects
             GL.BindVertexArray(VertexArrayObject);
-            GL.DrawArrays(PrimitiveType.Triangles, 0, 3);
+            GL.DrawArrays(PrimitiveType.Triangles, 0, vertices.Length);
 
             // Swap buffers
             SwapBuffers();
@@ -102,7 +107,7 @@ namespace DiploHex.App
         {
             base.OnFramebufferResize(e);
 
-            GL.Viewport(0, 0, e.Width, e.Height);
+            UpdateViewport(e.Width, e.Height);
         }
 
         protected override void OnUnload()
@@ -113,6 +118,12 @@ namespace DiploHex.App
             Shader?.Dispose();
 
             base.OnUnload();
+        }
+
+        private void UpdateViewport(int width, int height)
+        {
+            ViewportAspectRatio = (float)width / height;
+            GL.Viewport(0, 0, width, height);
         }
 
         private bool IsMouseDragging { get; set; }
