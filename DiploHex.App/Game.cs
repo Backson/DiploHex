@@ -5,9 +5,23 @@ using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace DiploHex.App
 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Vertex
+    {
+        public Vector3 Position;
+        public Color4 Color;
+
+        public Vertex(Vector3 position, Color4 color)
+        {
+            Position = position;
+            Color = color;
+        }
+    }
+
     public class Game : GameWindow
     {
         public Game(int width, int height, string title)
@@ -21,12 +35,14 @@ namespace DiploHex.App
 
         public float Zoom { get; private set; } = 1.0f;
 
+        public float ColorBlend { get; private set; } = 1.0f;
+
         public float ViewportAspectRatio { get; private set; } = 1.0f;
 
-        private static readonly Vector3[] vertices = [
-            new(-0.5f, -0.5f, 0.0f),
-            new( 0.5f, -0.5f, 0.0f),
-            new( 0.0f,  0.5f, 0.0f),
+        private static readonly Vertex[] vertices = [
+            new(new(-0.5f, -0.5f, 0.0f), Color4.Red),
+            new(new( 0.5f, -0.5f, 0.0f), Color4.Green),
+            new(new( 0.0f,  0.5f, 0.0f), Color4.Blue),
         ];
 
         protected override void OnLoad()
@@ -48,15 +64,21 @@ namespace DiploHex.App
             GL.BindVertexArray(VertexArrayObject);
 
             GL.BindBuffer(BufferTarget.ArrayBuffer, VertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * Vector3.SizeInBytes, vertices, BufferUsageHint.StaticDraw);
+            GL.BufferData(BufferTarget.ArrayBuffer, vertices.Length * sizeof(float) * 7, vertices, BufferUsageHint.StaticDraw);
 
-            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
+            // Position attribute
+            GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, sizeof(float) * 7, 0);
             GL.EnableVertexAttribArray(0);
+
+            // Color attribute
+            GL.VertexAttribPointer(1, 4, VertexAttribPointerType.Float, false, sizeof(float) * 7, sizeof(float) * 3);
+            GL.EnableVertexAttribArray(1);
 
             Shader.Use();
 
             TransformLocation = Shader.GetUniformLocation("uTransform");
             ColorLocation = Shader.GetUniformLocation("uColor");
+            ColorBlendLocation = Shader.GetUniformLocation("uColorBlend");
         }
 
         protected override void OnUpdateFrame(FrameEventArgs e)
@@ -72,6 +94,21 @@ namespace DiploHex.App
                 RenderOffsetBase = Vector2.Zero;
                 Zoom = 1.0f;
                 DragStartMousePosition = LastMousePosition;
+            }
+            else if (KeyboardState.IsKeyDown(Keys.D1))
+            {
+                // Set color blend to 0.0f (only use per-vertex color)
+                ColorBlend = 0.0f;
+            }
+            else if (KeyboardState.IsKeyDown(Keys.D2))
+            {
+                // Set color blend to half and half
+                ColorBlend = 0.5f;
+            }
+            else if (KeyboardState.IsKeyDown(Keys.D3))
+            {
+                // Set color blend to 1.0f (only use uniform color)
+                ColorBlend = 1.0f;
             }
         }
 
@@ -94,6 +131,7 @@ namespace DiploHex.App
 
             // Set fill color
             GL.Uniform4(ColorLocation, FillColor);
+            GL.Uniform1(ColorBlendLocation, ColorBlend);
 
             // Draw objects
             GL.BindVertexArray(VertexArrayObject);
@@ -176,6 +214,8 @@ namespace DiploHex.App
         private int TransformLocation { get; set; }
 
         private int ColorLocation { get; set; }
+
+        private int ColorBlendLocation { get; set; }
 
         private static NativeWindowSettings MakeWindowSettings(int width, int height, string title)
         {
